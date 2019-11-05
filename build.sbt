@@ -33,19 +33,22 @@ lazy val core = (project in file("core"))
     parallelExecution in Test := false
   )
 
+val neo4jVersion = "3.4.12"
+
 lazy val neo4j = (project in file("neo4j"))
   .settings(commonSettings)
   .dependsOn(core % "compile->compile;test->test")
   .settings(
     name := "MeerkatNeo4j",
     libraryDependencies ++= Seq(
-      "org.neo4j"     % "neo4j"        % "3.2.6",
-      "org.neo4j"     % "neo4j-kernel" % "3.2.6",
-      "org.neo4j"     % "neo4j-io"     % "3.2.6",
+      "org.neo4j"     % "neo4j"        % neo4jVersion,
+      "org.neo4j"     % "neo4j-cypher" % neo4jVersion,
+      "org.neo4j"     % "neo4j-kernel" % neo4jVersion,
+      "org.neo4j"     % "neo4j-io"     % neo4jVersion,
       "org.scalactic" %% "scalactic"   % "3.0.1" % Test,
       "org.scalatest" %% "scalatest"   % "3.0.1" % Test,
-      "org.neo4j"     % "neo4j-kernel" % "3.2.6" % Test classifier "tests",
-      "org.neo4j"     % "neo4j-io"     % "3.2.6" % Test classifier "tests"
+      "org.neo4j"     % "neo4j-kernel" % neo4jVersion % Test classifier "tests",
+      "org.neo4j"     % "neo4j-io"     % neo4jVersion % Test classifier "tests"
     )
   )
 
