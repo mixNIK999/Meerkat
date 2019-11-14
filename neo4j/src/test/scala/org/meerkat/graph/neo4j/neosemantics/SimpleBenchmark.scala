@@ -1,0 +1,54 @@
+package org.meerkat.graph.neo4j.neosemantics
+
+import org.meerkat.Syntax.syn
+import org.meerkat.graph.neo4j.Neo4jInput.Entity
+import org.meerkat.input.Input
+import org.meerkat.parsers.Parsers._
+import org.meerkat.parsers._
+import org.meerkat.sppf.NonPackedNode
+import org.neo4j.graphdb.Node
+import org.scalameter.{Key, Measurer, config}
+
+
+trait SimpleBenchmark {
+
+  def benchmarkQuery[L, N, T <: NonPackedNode, V](
+                                                   graph: Input[L, N],
+                                                   query: AbstractCPSParsers.AbstractSymbol[L, N, T, V],
+                                                   runsNumber: Int,
+                                                   measurer: Measurer[Double]): Double = {
+
+    val list = for (i <- 0 until runsNumber) yield {
+      query.reset()
+      config(
+        Key.exec.benchRuns -> 1
+      ) withMeasurer {
+        measurer
+      } measure {
+        executeQuery(query, graph).length
+      }
+    }
+//    println(list)
+    list.map(_.value).sum / runsNumber
+  }
+
+  def getIdFromNode(e : Entity): Long = {e.entity.asInstanceOf[Node].getId}
+
+  // time in ms, memory in kB
+  def benchmarkSample[L, N <: Entity, V](
+                                                    graph: Input[L, N],
+//                                                    queryWithoutStart: AbstractCPSParsers.AbstractSymbol[L, N, T, V],
+                                                    queryWithoutStart: Symbol[L, N, V],
+                                                    runsNumber: Int,
+                                                    predicate: N => Boolean) = {
+    val getAllVertex = syn(V(predicate) ^^)
+    val allVertex = executeQuery(getAllVertex, graph).map(getIdFromNode)
+    for (v <- allVertex) yield {
+      val query = syn(V(getIdFromNode(_:Entity) == v) ~ queryWithoutStart &&)
+      val time = benchmarkQuery(graph, query, runsNumber, new Measurer.Default)
+      val memory = benchmarkQuery(graph, query, runsNumber, new Measurer.MemoryFootprint)
+      val res = executeQuery(query, graph).toList
+      (time, memory, res)
+    }
+  }
+}
