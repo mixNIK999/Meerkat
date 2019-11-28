@@ -42,7 +42,6 @@ lazy val neo4j = (project in file("neo4j"))
     name := "MeerkatNeo4j",
     libraryDependencies ++= Seq(
       "org.neo4j"     % "neo4j"        % neo4jVersion,
-      "org.neo4j"     % "neo4j-cypher" % neo4jVersion,
       "org.neo4j"     % "neo4j-kernel" % neo4jVersion,
       "org.neo4j"     % "neo4j-io"     % neo4jVersion,
       "org.scalactic" %% "scalactic"   % "3.0.1" % Test,

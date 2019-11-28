@@ -19,16 +19,17 @@ trait SimpleBenchmark {
                                                    measurer: Measurer[Double]): Double = {
 
     val list = for (i <- 0 until runsNumber) yield {
-      query.reset()
-      config(
-        Key.exec.benchRuns -> 1
+      val res = config(
+          Key.exec.benchRuns -> 1
       ) withMeasurer {
         measurer
       } measure {
         executeQuery(query, graph).length
       }
+      query.reset()
+      res
     }
-//    println(list)
+    //    println(list)
     list.map(_.value).sum / runsNumber
   }
 
@@ -36,13 +37,12 @@ trait SimpleBenchmark {
 
   // time in ms, memory in kB
   def benchmarkSample[L, N <: Entity, V](
-                                                    graph: Input[L, N],
-//                                                    queryWithoutStart: AbstractCPSParsers.AbstractSymbol[L, N, T, V],
-                                                    queryWithoutStart: Symbol[L, N, V],
-                                                    runsNumber: Int,
-                                                    predicate: N => Boolean) = {
-    val getAllVertex = syn(V(predicate) ^^)
-    val allVertex = executeQuery(getAllVertex, graph).map(getIdFromNode)
+                                          graph: Input[L, N],
+                                          queryWithoutStart: Symbol[L, N, V],
+                                          runsNumber: Int,
+                                          getStartVertex: Symbol[L, N, Entity]) = {
+
+    val allVertex = executeQuery(getStartVertex, graph).map(getIdFromNode)
     for (v <- allVertex) yield {
       val query = syn(V(getIdFromNode(_:Entity) == v) ~ queryWithoutStart &&)
       val time = benchmarkQuery(graph, query, runsNumber, new Measurer.Default)
