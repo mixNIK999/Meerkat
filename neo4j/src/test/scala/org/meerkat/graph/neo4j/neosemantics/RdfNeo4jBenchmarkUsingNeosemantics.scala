@@ -1,11 +1,11 @@
 package org.meerkat.graph.neo4j.neosemantics
 
 import java.io.File
+import java.util
 
 import org.meerkat.Syntax.syn
 import org.meerkat.graph.neo4j.Neo4jInput
 import org.meerkat.graph.neo4j.Neo4jInput.Entity
-import org.meerkat.graph.neo4j.neosemantics.GPPerf1.S
 import org.meerkat.parsers.Parsers._
 import org.meerkat.parsers._
 import org.neo4j.graphdb.factory.{GraphDatabaseFactory, GraphDatabaseSettings}
@@ -24,14 +24,16 @@ object RdfNeo4jBenchmarkUsingNeosemantics extends App with SimpleBenchmark {
   val graph = new Neo4jInput(graphDb)
 
   val queryToDb: QueryToDb[Entity, Entity, String] = SameGeneration(RdfConstants.RDFS__SUB_CLASS_OF)
+//  val queryToDb: QueryToDb[Entity, Entity, String] = GPPerf1
 
 
 //  val ans = executeQuery(syn(queryToDb.startVertexes ~ queryToDb.queryWithoutStart & {case _ ~ b => b}), graph).toList
 //  val ans = executeQuery(syn(queryToDb.startVertexes), graph).toList
 //  println(ans)
 
-  val testResult = benchmarkSample(graph, queryToDb.queryWithoutStart, 1, queryToDb.startVertexes)
-  testResult.take(10).foreach({case (time, mem, res) => println(s"$time ms; $mem kB; ${res.length} items")})
+  val testResult = benchmarkSample(graph, queryToDb.findPathsQueryWithoutStart, 1, queryToDb.startVertexes)
+//  testResult.take(50).foreach({case (time, mem, res) => println(s"$time ms; $mem kB; ${res.length} items")})
+  testResult.take(50).foreach({case (time, mem, res) => println(s"$time ms; $mem kB; ${res} items")})
 
   tx.success()
   tx.close()
@@ -48,21 +50,44 @@ sealed trait QueryToDb[L, N, V] {
     e.hasProperty(prop) && p(e.getProperty[T](prop))
   }
 
-  val startVertexes: Symbol[L, Entity, Entity] = syn(V(checkIfHas[N](_: Entity, "uri")(_ => true)) ^^)
-  val queryWithoutStart: Symbol[L, N, V]
+  def startVertexes: Symbol[L, Entity, Entity] = syn(V(checkIfHas[N](_: Entity, "uri")(_ => true)) ^^)
+  def findFinishQueryWithoutStart: Symbol[L, N, V]
+  def findPathsQueryWithoutStart: Symbol[L, N, util.ArrayDeque[V]]
+  def findPathLengthQueryWithoutStart: Symbol[L, N, Int]
+
 }
 case class SameGeneration(private val edgeName: String) extends QueryToDb[Entity, Entity, String] {
   protected val OUT: Edge[Entity] = outE((_: Entity).label() == edgeName)
   protected val IN: Edge[Entity] = inE((_: Entity).label() == edgeName)
 
-  private def S: Symbol[Entity, Entity, _] = syn(IN ~ S ~ OUT)
-  override val queryWithoutStart: Symbol[Entity, Entity, String] = syn(
+  protected val uriFromV: Symbol[Entity, Entity, String] =
+    syn(V((_: Entity) => true) ^ ((_: Entity).getProperty[String]("uri")))
+
+  private def S: Symbol[Entity, Entity, _] = syn(IN ~ S ~ OUT  | OUT)
+  override def findFinishQueryWithoutStart: Symbol[Entity, Entity, String] = syn(
     S.?
       // without & {case ...} type error
-      ~ syn(V((_: Entity) => true) ^ ((_: Entity).getProperty[String]("uri")))
+      ~ uriFromV
       & { case _ ~ a => a }
   )
 
+//  override def findPathsQueryWithoutStart: Symbol[Entity, Entity, List[String]] = ???
+  override def findPathsQueryWithoutStart: Symbol[Entity, Entity, util.ArrayDeque[String]] = syn(
+    syn(
+      IN ~ uriFromV ~ findPathsQueryWithoutStart ~ OUT ~ uriFromV
+        & {case (l:String) ~ (deque:util.ArrayDeque[String]) ~ (r:String) =>
+        deque.addLast(r)
+        deque.addFirst(l)
+        deque}
+      | OUT ~ uriFromV
+        & {case uri:String =>
+        val deque = new util.ArrayDeque[String]()
+        deque.add(uri)
+        deque}
+    )
+  )
+  override def findPathLengthQueryWithoutStart: Symbol[Entity, Entity, Int] =
+    syn(IN ~ uriFromV ~ findPathLengthQueryWithoutStart ~ OUT ~ uriFromV  & {case _ ~ (inLen:Int) ~ _ => inLen + 2} | OUT ~ uriFromV & (_ => 1))
 }
 
 case object GPPerf1 extends QueryToDb[Entity, Entity, String] {
@@ -75,10 +100,12 @@ case object GPPerf1 extends QueryToDb[Entity, Entity, String] {
 
   private def S: Symbol[Entity, Entity, _] = syn(SCOR ~ S ~ SCO | TR ~ S ~ T | SCOR ~ SCO | TR ~ T)
 
-  override val queryWithoutStart: Symbol[Entity, Entity, String] = syn(
+  override def findFinishQueryWithoutStart: Symbol[Entity, Entity, String] = syn(
     S.?
       // without & {case ...} type error
       ~ syn(V((_: Entity) => true) ^ ((_: Entity).getProperty[String]("uri")))
       & { case _ ~ a => a }
   )
+  override def findPathsQueryWithoutStart: Symbol[Entity, Entity, util.ArrayDeque[String]] = ???
+  override def findPathLengthQueryWithoutStart: Symbol[Entity, Entity, Int] = ???
 }
