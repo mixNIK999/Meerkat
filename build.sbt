@@ -59,6 +59,17 @@ lazy val root = (project in file("."))
   .aggregate(core, neo4j)
   .dependsOn(core, neo4j)
 
+lazy val benchmark = (project in file("benchmark"))
+  .settings(commonSettings)
+  .settings(
+    name := "MeerkatBenchmark",
+    libraryDependencies ++= Seq(
+      "com.storm-enroute" %% "scalameter"   % "0.10.1"
+    )
+  )
+  .aggregate(root)
+  .dependsOn(root)
+
 scalafmtConfig in ThisBuild := file(".scalafmt.conf")
 scalafmtOnCompile in ThisBuild := true
 scalafmtTestOnCompile in ThisBuild := true
