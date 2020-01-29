@@ -4,6 +4,7 @@ import java.io.File
 import java.util
 
 import org.meerkat.Syntax.syn
+import org.meerkat.graph.benchmark.Main.benchmarkSample
 import org.meerkat.graph.neo4j.Neo4jInput
 import org.meerkat.graph.neo4j.Neo4jInput.Entity
 import org.meerkat.parsers.Parsers._
@@ -31,6 +32,26 @@ trait WithNeo4j extends App with SimpleBenchmark {
       tx.close()
     }
   }
+
+  def printPathLengthWithFinish(queryToDb: QueryToDb[Entity, Entity, String])(
+      graph: Neo4jInput): Unit = {
+
+    val testResult = benchmarkSample(graph,
+                                     queryToDb.findPathLengthWithFinishQuery,
+                                     2,
+                                     queryToDb.startVertexes)
+    testResult
+    //      .take(5)
+      .map({
+        case (time, mem, res) => (time, mem, res.map(_._1).sum, res.length, res)
+      })
+      .foreach({
+        case (time, mem, sum, len, res) =>
+          print(s"$time $mem $sum $len ")
+          res.foreach(p => print(s"$p "))
+          println()
+      })
+  }
 }
 
 object RdfConstants {
@@ -44,8 +65,7 @@ sealed trait QueryToDb[L, N, V] {
     e.hasProperty(prop) && p(e.getProperty[T](prop))
   }
 
-  def startVertexes: Symbol[L, Entity, Entity] =
-    syn(V(checkIfHas[N](_: Entity, "uri")(_ => true)) ^^)
+  def startVertexes: Symbol[L, Entity, Entity]
   def findFinishQuery: Symbol[L, N, V]
   def findPathsQuery: Symbol[L, N, util.ArrayDeque[V]]
   def findPathLengthQuery: Symbol[L, N, Int]
@@ -60,14 +80,17 @@ sealed trait RdfQuery extends QueryToDb[Entity, Entity, String] {
   override def findPathLengthWithFinishQuery
     : Symbol[Entity, Entity, (Int, String)] =
     syn(findPathLengthQuery ~ uriFromV & { case len ~ uri => (len, uri) })
+
+  override def startVertexes =
+    syn(V(checkIfHas[String](_: Entity, "uri")(_ => true)) ^^)
 }
 
 case class SameGeneration(private val edgeName: String) extends RdfQuery {
   protected val OUT: Edge[Entity] = outE((_: Entity).label() == edgeName)
   protected val IN: Edge[Entity]  = inE((_: Entity).label() == edgeName)
 
-  override def startVertexes: Symbol[Entity, Entity, Entity] =
-    syn(OUT ~ OUT ~ OUT ~ OUT ~ super.startVertexes ~ OUT &&)
+//  override def startVertexes: Symbol[Entity, Entity, Entity] =
+//    syn(OUT ~ OUT ~ OUT ~ OUT ~ super.startVertexes ~ OUT &&)
 
   private def S: Symbol[Entity, Entity, _] = syn(IN ~ S ~ OUT | OUT)
   override def findFinishQuery: Symbol[Entity, Entity, String] =
