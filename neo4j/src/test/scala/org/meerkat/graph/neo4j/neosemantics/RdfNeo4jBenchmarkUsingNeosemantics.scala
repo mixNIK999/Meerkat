@@ -23,17 +23,16 @@ object RdfNeo4jBenchmarkUsingNeosemantics extends App with SimpleBenchmark {
   val tx    = graphDb.beginTx()
   val graph = new Neo4jInput(graphDb)
 
-  val queryToDb: QueryToDb[Entity, Entity, String] = SameGeneration(RdfConstants.RDFS__SUB_CLASS_OF)
-//  val queryToDb: QueryToDb[Entity, Entity, String] = GPPerf1
+//  val queryToDb: QueryToDb[Entity, Entity, String] = SameGeneration(RdfConstants.RDFS__SUB_CLASS_OF)
+  val queryToDb: QueryToDb[Entity, Entity, String] = GPPerf1
 
 
-//  val ans = executeQuery(syn(queryToDb.startVertexes ~ queryToDb.queryWithoutStart & {case _ ~ b => b}), graph).toList
-//  val ans = executeQuery(syn(queryToDb.startVertexes), graph).toList
-//  println(ans)
+  val testResult = benchmarkSample(graph, queryToDb.findPathLengthQueryWithoutStart, 2, queryToDb.startVertexes)
 
-  val testResult = benchmarkSample(graph, queryToDb.findPathsQueryWithoutStart, 1, queryToDb.startVertexes)
-//  testResult.take(50).foreach({case (time, mem, res) => println(s"$time ms; $mem kB; ${res.length} items")})
-  testResult.take(50).foreach({case (time, mem, res) => println(s"$time ms; $mem kB; ${res} items")})
+    testResult.drop(5)
+      .map({case (time, mem, res) => (time, mem, res.sum, res.length)})
+      .take(4)
+      .foreach({case (time, mem, sum, len) => println(s"$time ms; $mem kB; sum len $sum; $len items")})
 
   tx.success()
   tx.close()
@@ -42,7 +41,7 @@ object RdfNeo4jBenchmarkUsingNeosemantics extends App with SimpleBenchmark {
 object RdfConstants {
   val RDFS__SUB_CLASS_OF = "rdfs__subClassOf"
   val RDF__TYPE = "rdf__type"
-  val SKOS__BROADER_TRANSITIVE = "dct__isPartOf"
+  val SKOS__BROADER_TRANSITIVE = "skos__broaderTransitive"
 }
 
 sealed trait QueryToDb[L, N, V] {
@@ -56,12 +55,17 @@ sealed trait QueryToDb[L, N, V] {
   def findPathLengthQueryWithoutStart: Symbol[L, N, Int]
 
 }
-case class SameGeneration(private val edgeName: String) extends QueryToDb[Entity, Entity, String] {
+
+sealed trait RdfQuery {
+  protected val uriFromV: Symbol[Entity, Entity, String] =
+    syn(V((_: Entity) => true) ^ ((_: Entity).getProperty[String]("uri")))
+}
+
+case class SameGeneration(private val edgeName: String) extends QueryToDb[Entity, Entity, String] with RdfQuery {
   protected val OUT: Edge[Entity] = outE((_: Entity).label() == edgeName)
   protected val IN: Edge[Entity] = inE((_: Entity).label() == edgeName)
 
-  protected val uriFromV: Symbol[Entity, Entity, String] =
-    syn(V((_: Entity) => true) ^ ((_: Entity).getProperty[String]("uri")))
+  override def startVertexes: Symbol[Entity, Entity, Entity] = syn(OUT ~ OUT ~ OUT ~ OUT ~ super.startVertexes ~ OUT &&)
 
   private def S: Symbol[Entity, Entity, _] = syn(IN ~ S ~ OUT  | OUT)
   override def findFinishQueryWithoutStart: Symbol[Entity, Entity, String] = syn(
@@ -71,7 +75,6 @@ case class SameGeneration(private val edgeName: String) extends QueryToDb[Entity
       & { case _ ~ a => a }
   )
 
-//  override def findPathsQueryWithoutStart: Symbol[Entity, Entity, List[String]] = ???
   override def findPathsQueryWithoutStart: Symbol[Entity, Entity, util.ArrayDeque[String]] = syn(
     syn(
       IN ~ uriFromV ~ findPathsQueryWithoutStart ~ OUT ~ uriFromV
@@ -87,10 +90,10 @@ case class SameGeneration(private val edgeName: String) extends QueryToDb[Entity
     )
   )
   override def findPathLengthQueryWithoutStart: Symbol[Entity, Entity, Int] =
-    syn(IN ~ uriFromV ~ findPathLengthQueryWithoutStart ~ OUT ~ uriFromV  & {case _ ~ (inLen:Int) ~ _ => inLen + 2} | OUT ~ uriFromV & (_ => 1))
+    syn(IN ~ findPathLengthQueryWithoutStart ~ OUT  & {case (inLen:Int) => inLen + 2} | OUT ~ uriFromV & (_ => 1))
 }
 
-case object GPPerf1 extends QueryToDb[Entity, Entity, String] {
+case object GPPerf1 extends QueryToDb[Entity, Entity, String] with RdfQuery {
 
   protected val SCO: Edge[Entity] = outE((_: Entity).label() == RdfConstants.RDFS__SUB_CLASS_OF)
   protected val SCOR: Edge[Entity] = inE((_: Entity).label() == RdfConstants.RDFS__SUB_CLASS_OF)
@@ -107,5 +110,12 @@ case object GPPerf1 extends QueryToDb[Entity, Entity, String] {
       & { case _ ~ a => a }
   )
   override def findPathsQueryWithoutStart: Symbol[Entity, Entity, util.ArrayDeque[String]] = ???
-  override def findPathLengthQueryWithoutStart: Symbol[Entity, Entity, Int] = ???
+
+  override def findPathLengthQueryWithoutStart: Symbol[Entity, Entity, Int] =
+    syn(
+      SCOR ~ findPathLengthQueryWithoutStart ~ SCO & {case inLen:Int => inLen + 2}
+        | TR ~ findPathLengthQueryWithoutStart ~ T & {case inLen:Int => inLen + 2}
+        | SCOR ~ uriFromV ~SCO & (_ => 2)
+        | TR ~ uriFromV ~ T & (_ => 2)
+    )
 }
