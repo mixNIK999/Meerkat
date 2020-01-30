@@ -81,7 +81,7 @@ sealed trait RdfQuery extends QueryToDb[Entity, Entity, String] {
     : Symbol[Entity, Entity, (Int, String)] =
     syn(findPathLengthQuery ~ uriFromV & { case len ~ uri => (len, uri) })
 
-  override def startVertexes =
+  override def startVertexes: Symbol[Entity, Entity, Entity] =
     syn(V(checkIfHas[String](_: Entity, "uri")(_ => true)) ^^)
 }
 
