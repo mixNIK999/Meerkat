@@ -2,12 +2,10 @@ package org.meerkat.graph.benchmark
 
 import org.meerkat.graph.benchmark.neosemantics.{
   GPPerf1,
-  QueryToDb,
   RdfConstants,
   SameGeneration,
   WithNeo4j
 }
-import org.meerkat.graph.neo4j.Neo4jInput.Entity
 
 object Main extends App with WithNeo4j {
   if (args.length < 3) {

@@ -4,7 +4,6 @@ import java.io.File
 import java.util
 
 import org.meerkat.Syntax.syn
-import org.meerkat.graph.benchmark.Main.benchmarkSample
 import org.meerkat.graph.neo4j.Neo4jInput
 import org.meerkat.graph.neo4j.Neo4jInput.Entity
 import org.meerkat.parsers.Parsers._
@@ -38,7 +37,6 @@ trait WithNeo4j extends App with SimpleBenchmark {
 
     val testResult = benchmarkSample(graph,
                                      queryToDb.findPathLengthWithFinishQuery,
-                                     2,
                                      queryToDb.startVertexes)
     testResult
     //      .take(5)
