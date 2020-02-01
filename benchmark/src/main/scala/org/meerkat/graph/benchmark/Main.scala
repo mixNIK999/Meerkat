@@ -36,8 +36,7 @@ object Main extends App with WithNeo4j {
     case "enzime" =>
       runWithGraph(
         printPathLengthWithFinish(SameGeneration("skos__narrowerTransitive")))
-    case "Geo" =>
-      ??? //runWithGraph(printPathLengthWithFinish(SameGeneration(RdfConstants.RDFS__SUB_CLASS_OF)))
+    case "GeoBorderTr" => runWithGraph(printPathLengthWithFinish(SameGeneration(RdfConstants.SKOS__BROADER_TRANSITIVE)))
     case _ => new RuntimeException("unknown experiment type")
   }
 }
