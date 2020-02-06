@@ -1,6 +1,8 @@
 package org.meerkat.graph.benchmark.neosemantics
 
 import org.meerkat.Syntax.syn
+import org.meerkat.graph.benchmark.neosemantics.SameGenerationExample.queryFromV
+import org.meerkat.graph.benchmark.neosemantics.SameGenerationExample.queryFromV1
 import org.meerkat.graph.neo4j.Neo4jInput.Entity
 import org.meerkat.input.Input
 import org.meerkat.parsers.Parsers._
@@ -70,16 +72,44 @@ trait SimpleBenchmark {
     ans
   }
 
+  def forEachVertex[L, N, V](
+      graph: Input[L, N],
+      getStartVertex: Symbol[L, N, Entity])(fun: (String, Long) => V) = {
+    val allVertex = executeQuery(getStartVertex, graph).map((v: Entity) =>
+      (v.getProperty[String]("uri"), getIdFromNode(v)))
+    for ((uri, id) <- allVertex) yield {
+      fun(uri, id)
+    }
+  }
   // time in ms, memory in kB
   def benchmarkSample[L, N <: Entity, V](
       graph: Input[L, N],
       queryWithoutStart: Symbol[L, N, V],
       getStartVertex: Symbol[L, N, Entity]) = {
 
-    val allVertex = executeQuery(getStartVertex, graph).map(getIdFromNode)
-    for (v <- allVertex) yield {
-      val query = syn(V(getIdFromNode(_: Entity) == v) ~ queryWithoutStart &&)
-      benchmarkQuery(graph, query)
+    forEachVertex(graph, getStartVertex) { (uri, id) =>
+      val query = syn(V(getIdFromNode(_: Entity) == id) ~ queryWithoutStart &&)
+      (uri, benchmarkQuery(graph, query))
+    }
+  }
+
+  def benchmarkExample[L, N <: Entity, QV](graph: Input[L, N],
+                                          query: Symbol[L, N, QV],
+                                          getStartVertex: Symbol[L, N, Entity]) = {
+
+    forEachVertex(graph, getStartVertex) { (uri, id) =>
+      (uri,
+       benchmarkQuery(graph, queryFromV(syn(V(getIdFromNode(_: Entity) == id)^^), query)))
+    }
+  }
+
+  def benchmarkExample1[L, N <: Entity, QV](graph: Input[L, N],
+                                           query: Symbol[L, N, QV],
+                                           getStartVertex: Symbol[L, N, Entity]) = {
+
+    forEachVertex(graph, getStartVertex) { (uri, id) =>
+      (uri,
+        benchmarkQuery(graph, queryFromV1(syn(V(getIdFromNode(_: Entity) == id)^^), query)))
     }
   }
 }
