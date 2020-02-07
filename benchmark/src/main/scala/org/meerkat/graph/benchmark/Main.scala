@@ -1,18 +1,13 @@
 package org.meerkat.graph.benchmark
 
-import org.meerkat.graph.benchmark.neosemantics.{
-  GPPerf1,
-  RdfConstants,
-  RdfQuery,
-  SameGeneration,
-  WithNeo4j
-}
+import org.meerkat.graph.benchmark.neosemantics.{GPPerf1, RdfConstants, RdfQuery, SameGeneration, WithNeo4j}
 import org.meerkat.graph.neo4j.Neo4jInput.Entity
 import org.meerkat.input.Input
 import org.meerkat.parsers.Parsers._
 import org.meerkat.parsers.Parsers
 import org.meerkat.parsers._
 import org.meerkat.Syntax.syn
+import org.meerkat.graph.benchmark.neosemantics.RdfConstants._
 import org.meerkat.graph.benchmark.neosemantics.SameGenerationExample._
 import org.neo4j.cypher.internal.v3_4.expressions.True
 
@@ -38,7 +33,7 @@ object Main extends App with WithNeo4j {
     runWithGraph(
       { graph =>
         printPathLengthWithStartAndFinish(
-          benchmarkQueryToDb(SameGeneration(RdfConstants.RDFS__SUB_CLASS_OF))(
+          benchmarkQueryToDb(SameGeneration(RDFS__SUB_CLASS_OF))(
             graph))
       }
     )
@@ -56,7 +51,7 @@ object Main extends App with WithNeo4j {
       val result = executeQuery(q, graph).toList
 
 
-      print(result.map(_._2).sum)
+      print(result.map(_._1).sum)
     })
 
   def runExample(brs: List[String]) =
@@ -91,13 +86,18 @@ object Main extends App with WithNeo4j {
 
   experimentType match {
     case "GPPerf1" => runQTB(GPPerf1)
-    case "GPPerf2" => runQTB(SameGeneration(RdfConstants.RDFS__SUB_CLASS_OF))
-    case "GoProp"  => runQTB(SameGeneration("owl__onProperty"))
-    case "enzime"  => runQTB(SameGeneration("skos__narrowerTransitive"))
+    case "GPPerf2" => runQTB(SameGeneration(RDFS__SUB_CLASS_OF))
+    case "GoProp"  => runQTB(SameGeneration(OWL__ON_PROPERTY))
+    case "enzime"  => runQTB(SameGeneration(SKOS__NARROWER_TRANSITIVEY))
     case "GeoBorderTr" =>
-      runQTB(SameGeneration(RdfConstants.SKOS__BROADER_TRANSITIVE))
-    case "example" =>
-      runExample2(RdfConstants.RDFS__SUB_CLASS_OF :: Nil)
+      runQTB(SameGeneration(SKOS__BROADER_TRANSITIVE))
+
+    case "type_and_subClass" => runExample(RDFS__SUB_CLASS_OF :: RDF__TYPE :: Nil)
+    case "subClass" => runExample(RDFS__SUB_CLASS_OF :: Nil)
+    case "NT" => runExample(SKOS__NARROWER_TRANSITIVEY :: Nil)
+    case "BT" => runExample(SKOS__BROADER_TRANSITIVE :: Nil)
+
+    case "example" => runExample(RDFS__SUB_CLASS_OF :: Nil)
     case _ => throw new RuntimeException("unknown experiment type")
   }
 }

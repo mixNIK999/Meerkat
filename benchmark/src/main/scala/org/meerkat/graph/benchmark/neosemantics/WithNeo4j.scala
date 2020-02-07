@@ -62,6 +62,8 @@ object RdfConstants {
   val RDFS__SUB_CLASS_OF       = "rdfs__subClassOf"
   val RDF__TYPE                = "rdf__type"
   val SKOS__BROADER_TRANSITIVE = "skos__broaderTransitive"
+  val SKOS__NARROWER_TRANSITIVEY = "skos__narrowerTransitive"
+  val OWL__ON_PROPERTY = "owl__onProperty"
 }
 
 sealed trait QueryToDb[L, N, V] {
@@ -177,7 +179,7 @@ object SameGenerationExample {
                                query: Symbol[L, N, _]) =
     syn(startV ~ query ~ uriV &
         {case _ ~ (len:Int) ~ (v:Entity) =>
-             (len, v.g )})
+             (len, v.getProperty[String]("uri") )})
 
 
   def queryFromV1[L, N](startV: Symbol[L, N, _],
