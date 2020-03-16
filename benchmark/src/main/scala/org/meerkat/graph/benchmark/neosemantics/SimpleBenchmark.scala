@@ -77,9 +77,10 @@ trait SimpleBenchmark {
       getStartVertex: Symbol[L, N, Entity])(fun: (String, Long) => V) = {
     val allVertex = executeQuery(getStartVertex, graph).map((v: Entity) =>
       (v.getProperty[String]("uri"), getIdFromNode(v)))
-    for ((uri, id) <- allVertex) yield {
-      fun(uri, id)
-    }
+//    for ((uri, id) <- allVertex) yield {
+//      fun(uri, id)
+//    }
+    allVertex.view.map{ case (uri, id) => fun(uri, id)}
   }
   // time in ms, memory in kB
   def benchmarkSample[L, N <: Entity, V](
