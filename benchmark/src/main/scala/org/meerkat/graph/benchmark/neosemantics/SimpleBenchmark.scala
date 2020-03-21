@@ -80,7 +80,7 @@ trait SimpleBenchmark {
 //    for ((uri, id) <- allVertex) yield {
 //      fun(uri, id)
 //    }
-    allVertex.view.dropWhile{ case (uri, _) => uri != "http://lod.geospecies.org/ses/R6bJt"}.map{ case (uri, id) => fun(uri, id)}
+    allVertex.view.dropWhile{ case (uri, _) => uri != "http://lod.geospecies.org/ses/8Sbge"}.map{ case (uri, id) => fun(uri, id)}
   }
   // time in ms, memory in kB
   def benchmarkSample[L, N <: Entity, V](
