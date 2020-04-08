@@ -7,6 +7,7 @@ import org.meerkat.graph.benchmark.neosemantics.WithNeo4j
 import org.meerkat.graph.neo4j.Neo4jInput.Entity
 import org.meerkat.input.Input
 import org.meerkat.parsers.Parsers._
+import org.meerkat.parsers.Parsers
 
 object Main extends App with WithNeo4j {
   if (args.length < 3) {
