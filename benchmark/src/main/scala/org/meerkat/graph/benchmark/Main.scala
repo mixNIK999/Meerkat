@@ -22,7 +22,7 @@ object Main extends App with WithNeo4j {
   //  Example /home/user/neo4j/data/databases/graph.db
   val pathToConf = args(1)
 
-  // type (type_and_subClass, NT, BT ...)
+  // type (type_and_subClass, NT, BT)
   val experimentType = args(2)
 
   def runWithGraph =
