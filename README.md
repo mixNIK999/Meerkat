@@ -17,7 +17,7 @@ To run evaluation you need:
 
 How to install neosemantics: https://neo4j.com/docs/labs/nsmntx/current/install/
 ##### Importing RDF
-After run db with plugin, you can connect to it and load rdf using cypher language:
+After run db with plugin you can load rdf using cypher language:
 ```
 CREATE INDEX ON :Resource(uri)
 CALL semantics.importRDF($url, RDF/XML, { typesToLabels: false });
@@ -39,4 +39,18 @@ sbt ";project benchmark; run /path/to/db/data/file.db /path/to/db/config/conf $t
 * `$type` can be `BT`, `NT` or `type_and_subClass`
     * `BT` will use `broaderTransitive` edges for same generation query
     * `NT` will use `narrowerTransitive`
-    * `type_and_subClass` will use two type of edges: `type` and `subClassOf` 
+    * `type_and_subClass` will use two type of edges: `type` and `subClassOf`
+
+#### Output format
+Program will calculate and print result of same generation query with fixed start.
+```
+vertex_uri time memory total_length number_of_paths list_of_results
+```
+Where:
+* `vertex_uri` is uri of the source vertex
+* `time` in ms
+* `memory` in kB
+* `total_length` is the total length of all paths found
+* `number_of_paths` is the total number of all paths found
+* `list_of_results` is the pairs `(uri_of_end, path_length)` separated by space
+
